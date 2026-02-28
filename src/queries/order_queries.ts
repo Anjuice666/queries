@@ -216,7 +216,7 @@ export async function getHighValueOrders(
 ): Promise<any[]> {
   const query = `
     WITH customer_ltv AS (
-        SELECT 
+        SELECT
             customer_id,
             SUM(total_amount) as lifetime_value
         FROM orders
@@ -239,12 +239,41 @@ export async function getHighValueOrders(
     LEFT JOIN order_items oi ON o.order_id = oi.order_id
     LEFT JOIN products p ON oi.product_id = p.product_id
     WHERE o.total_amount >= ?
-    GROUP BY o.order_id, o.order_date, o.total_amount, c.email, 
-             ltv.lifetime_value, o.shipping_address, o.shipping_city, 
+    GROUP BY o.order_id, o.order_date, o.total_amount, c.email,
+             ltv.lifetime_value, o.shipping_address, o.shipping_city,
              o.shipping_state, o.shipping_zip
     ORDER BY o.total_amount DESC
     `;
 
   const rows = await db.all(query, [minAmount]);
+  return rows;
+}
+
+export async function getLongPendingOrders(
+  db: Database,
+  daysThreshold: number = 3
+): Promise<any[]> {
+  const query = `
+    SELECT
+        o.order_id,
+        o.order_number,
+        o.created_at as order_date,
+        o.total_amount,
+        c.first_name || ' ' || c.last_name as customer_name,
+        c.phone,
+        c.email,
+        julianday('now') - julianday(o.created_at) as days_pending,
+        o.shipping_address,
+        o.shipping_city,
+        o.shipping_state,
+        o.shipping_zip
+    FROM orders o
+    JOIN customers c ON o.customer_id = c.customer_id
+    WHERE o.status = 'pending'
+      AND julianday('now') - julianday(o.created_at) > ?
+    ORDER BY o.created_at
+    `;
+
+  const rows = await db.all(query, [daysThreshold]);
   return rows;
 }

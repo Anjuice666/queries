@@ -6,7 +6,7 @@ import path from "path";
 const REVIEW_DIR = "src/queries";
 
 async function main() {
-  process.exit(0);
+  // process.exit(0);
   // Read JSON input from stdin
   const input = await new Promise((resolve) => {
     let data = "";
@@ -61,6 +61,7 @@ If no, just say "Changes look appropriate."`;
   const messages = [];
   for await (const message of query({
     prompt,
+    abortController: new AbortController(),
   })) {
     messages.push(message);
   }
